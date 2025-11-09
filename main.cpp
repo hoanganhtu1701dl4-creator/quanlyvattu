@@ -300,8 +300,8 @@ struct ListNhanVien {
 TreeVattu dsVatTu;
 ListNhanVien dsNhanVien;
 // <<< MỚI >>> Tên file dữ liệu
-const string FILE_VATTU = "danhsachvattu";
-const string FILE_NHANVIEN = "danhsachnhanvien";
+const string FILE_VATTU = "danhsachvattu.txt";
+const string FILE_NHANVIEN = "danhsachnhanvien.txt";
 
 
 // -- CÁC HÀM XỬ LÝ CÂY AVL (VẬT TƯ) --
