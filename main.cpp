@@ -1,24 +1,21 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include <iomanip>
-#include <cstdlib>
-#include <fstream>
+#include <iomanip> // Cho setw, setprecision
+#include <cstdlib> // Cho system("cls")
+#include <fstream> // <<< MỚI >>> Cho File I/O
+#include <sstream> // <<< MỚI >>> Cho String Stream (đọc file)
 #include <algorithm> // Cho std::transform
-#include <cctype>    // Cho std::toupper
+#include <cctype>    // Cho std::toupper, isalpha, isdigit
 #include <limits>    // Cho numeric_limits
 
 using namespace std;
 
 // <<< SỬA >>> Hàm "Chờ Enter" đa nền tảng
+// Vì các hàm cin >> choice khác đều đã clear \n
+// nên ở đây ta chỉ cần cin.get() là đủ, không bị lỗi 2 lần Enter
 void pressEnterToContinue() {
     cout << "\nNhan Enter de tiep tuc...";
-    // Xóa bộ đệm đầu vào cho đến khi gặp \n
-    // Đảm bảo nó hoạt động sau cả cin >> và getline
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    if (cin.peek() == '\n') {
-        cin.get();
-    }
     cin.get(); // Chờ người dùng nhấn Enter
 }
 
@@ -105,6 +102,34 @@ string nhapChuoiChuBatBuoc(string prompt) {
     return input;
 }
 
+// <<< MỚI >>> Hàm nhập số nguyên (dùng cho nhập Năm)
+int nhapSoNguyen(string prompt, int minLength, int maxLength) {
+    string input;
+    bool hopLe;
+    do {
+        cout << prompt;
+        getline(cin, input);
+        input = trim(input);
+        hopLe = true;
+
+        if (input.empty()) {
+            cout << "Loi: Khong duoc de trong!\n";
+            hopLe = false;
+        }
+        else if (!isAllDigits(input)) {
+            cout << "Loi: Chi duoc phep nhap SO (0-9).\n";
+            hopLe = false;
+        }
+        else if (input.length() < (size_t)minLength || input.length() > (size_t)maxLength) {
+             cout << "Loi: Do dai khong hop le (phai co tu " << minLength << " den " << maxLength << " chu so).\n";
+             hopLe = false;
+        }
+    } while (!hopLe);
+    
+    // Chuyển chuỗi an toàn sang số
+    return stoi(input);
+}
+
 
 /*
  * Hàm nhập mảng char[] (cho SoHD)
@@ -132,6 +157,51 @@ void nhapChuoiCharBatBuoc(string prompt, char* dest, int maxLength, bool autoTuU
     strncpy(dest, input.c_str(), maxLength - 1); 
     dest[maxLength - 1] = '\0'; // Đảm bảo luôn kết thúc bằng null
 }
+
+// <<< MỚI >>> Hàm nhập số nguyên dương (có kiểm tra cin.fail())
+int nhapSoNguyenDuong(string prompt) {
+    int number = -1;
+    do {
+        cout << prompt;
+        cin >> number;
+
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Loi: Phai nhap la mot SO nguyen.\n";
+            number = -1; // Đặt lại để lặp
+        } else {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            if (number <= 0) {
+                cout << "Loi: So phai lon hon 0.\n";
+            }
+        }
+    } while (number <= 0);
+    return number;
+}
+
+// <<< MỚI >>> Hàm nhập số float không âm (có kiểm tra cin.fail())
+float nhapSoFloatKhongAm(string prompt) {
+    float number = -1.0;
+    do {
+        cout << prompt;
+        cin >> number;
+
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Loi: Phai nhap la mot SO (vi du: 10.5).\n";
+            number = -1.0; // Đặt lại để lặp
+        } else {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            if (number < 0) {
+                cout << "Loi: So phai lon hon hoac bang 0.\n";
+            }
+        }
+    } while (number < 0);
+    return number;
+}
+
 
 // -- CẢI TIẾN GIAO DIỆN (UI) --
 void clearScreen() {
@@ -229,6 +299,10 @@ struct ListNhanVien {
 // -- KHAI BÁO BIẾN TOÀN CỤC --
 TreeVattu dsVatTu;
 ListNhanVien dsNhanVien;
+// <<< MỚI >>> Tên file dữ liệu
+const string FILE_VATTU = "danhsachvattu";
+const string FILE_NHANVIEN = "danhsachnhanvien";
+
 
 // -- CÁC HÀM XỬ LÝ CÂY AVL (VẬT TƯ) --
 // (Không thay đổi)
@@ -284,6 +358,8 @@ NodeVattu* insertVattu(NodeVattu* node, Vattu vt) {
     else if (strcmp(vt.MAVT, node->info.MAVT) > 0)
         node->right = insertVattu(node->right, vt);
     else {
+        // <<< SỬA >>> Nếu tải file mà bị trùng (do file lỗi)
+        cout << "Canh bao: Ma vat tu " << vt.MAVT << " da ton tai. Khong them vao cay.\n";
         return node;
     }
 
@@ -373,7 +449,7 @@ NodeVattu* deleteVattu(NodeVattu* root, char mavt[]) {
 // -- CHỨC NĂNG A: QUẢN LÝ VẬT TƯ --
 // ---------------------------------------------
 
-// <<< SỬA >>> Cập nhật hàm xuLyThemVatTu
+// <<< SỬA >>> Cập nhật hàm xuLyThemVatTu (Dùng hàm nhập an toàn)
 void xuLyThemVatTu() {
     Vattu vt;
     cout << "\n-- Them Vat Tu Moi --\n";
@@ -381,12 +457,12 @@ void xuLyThemVatTu() {
     // --- Bắt đầu Validation MAVT ---
     string inputNum;
     string finalMa;
-   
-    int maxDigits = 11 - 1 - 2; 
+    
+    int maxDigits = 11 - 1 - 2; // "VT" + "so" + \0
     bool hopLe = false;
     
     do {
-        cout << "Nhap Ma Vat Tu  " << maxDigits << "  ";
+        cout << "Nhap PHAN SO cua Ma Vat Tu (VD: 001, toi da " << maxDigits << " so): ";
         getline(cin, inputNum);
         inputNum = trim(inputNum);
 
@@ -420,28 +496,11 @@ void xuLyThemVatTu() {
     vt.TENVT = nhapChuoiChuBatBuoc("Nhap Ten Vat Tu: ");
     
     // --- Validation DVT (không rỗng) ---
-    // Giữ nguyên, DVT có thể là "cai", "m2", "kg"
     vt.DVT = nhapChuoiBatBuoc("Nhap Don Vi Tinh: "); 
 
 
-    // --- SỬA --- Validation SoLuongTon (số >= 0)
-    vt.SoLuongTon = -1; // Đặt giá trị không hợp lệ ban đầu
-    do {
-        cout << "Nhap So Luong Ton (so nguyen >= 0): ";
-        cin >> vt.SoLuongTon;
-
-        if (cin.fail()) {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "Loi: So luong ton phai la mot SO nguyen.\n";
-            vt.SoLuongTon = -1; // Đặt lại để lặp
-        } else {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            if (vt.SoLuongTon < 0) {
-                cout << "Loi: So luong ton phai lon hon hoac bang 0.\n";
-            }
-        }
-    } while (vt.SoLuongTon < 0);
+    // --- SỬA --- Validation SoLuongTon (dùng hàm an toàn)
+    vt.SoLuongTon = (int)nhapSoFloatKhongAm("Nhap So Luong Ton (so nguyen >= 0): ");
     // --- Kết thúc Validation SoLuongTon ---
 
     dsVatTu.root = insertVattu(dsVatTu.root, vt);
@@ -485,6 +544,24 @@ void xuLyXoaVatTu() {
         return;
     }
     
+    // <<< MỚI >>> Kiểm tra xem VT đã được dùng trong hóa đơn chưa
+    for (int i = 0; i < dsNhanVien.soLuong; i++) {
+        NodeHoaDon* pHD = dsNhanVien.dsnv[i]->dshd.head;
+        while (pHD != NULL) {
+            NodeCT_HoaDon* pCT = pHD->info.dscthd.head;
+            while (pCT != NULL) {
+                if (strcmp(pCT->info.MAVT, mavt) == 0) {
+                    cout << "Loi: Vat tu nay da duoc su dung trong Hoa Don '" << pHD->info.SoHD << "'.\n";
+                    cout << "Khong the xoa vat tu de dam bao toan ven du lieu.\n";
+                    return;
+                }
+                pCT = pCT->next;
+            }
+            pHD = pHD->next;
+        }
+    }
+    // --- Kết thúc kiểm tra ---
+
     dsVatTu.root = deleteVattu(dsVatTu.root, mavt);
     cout << "Da xoa vat tu thanh cong!\n";
 }
@@ -509,7 +586,7 @@ void xuLyHieuChinhVatTu() {
         } else if (!isAllDigits(inputNum)) {
             cout << "Loi: Phan so cua ma vat tu chi duoc phep chua SO (0-9).\n";
         } else if (inputNum.length() > (size_t)maxDigits) {
-            cout << "Loi: Phan so qua dai (toi đa " << maxDigits << " so).\n";
+            cout << "Loi: Phan so qua dai (toi da " << maxDigits << " so).\n";
         } else {
             finalMa = "VT" + inputNum;
             finalMa = toUpper(finalMa); 
@@ -732,20 +809,17 @@ void xuLyThemNhanVien() {
         cout << "Nhap Ma Nhan Vien (so nguyen > 0): ";
         cin >> nvMoi->MANV;
 
-        // Xử lý nếu người dùng nhập chữ
         if (cin.fail()) {
-            cin.clear(); // Xóa cờ lỗi
-            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Xóa bộ đệm
+            cin.clear(); 
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
             cout << "Loi: Ma Nhan Vien phai la mot SO nguyen.\n";
             nvMoi->MANV = 0; // Đặt lại giá trị 0 để lặp lại
         } else {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Xóa \n nếu nhập đúng
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
             
-            // Kiểm tra > 0
             if (nvMoi->MANV <= 0) {
                 cout << "Loi: Ma Nhan Vien phai la so duong (> 0).\n";
             }
-            // Kiểm tra trùng lặp
             else if (timNhanVienTheoMa(nvMoi->MANV) != -1) {
                 cout << "Loi: Ma Nhan Vien da ton tai!\n";
                 delete nvMoi;
@@ -773,7 +847,6 @@ void xuLyThemNhanVien() {
 
     nvMoi->dshd.head = NULL;
 
-    // Yêu cầu "DS tăng dần" của bạn đã được xử lý bằng hàm này
     int viTriChen = timViTriChen(nvMoi);
 
     for (int j = dsNhanVien.soLuong; j > viTriChen; j--) {
@@ -815,7 +888,6 @@ void inDanhSachNhanVien() {
 
 // --------------------------------------------
 // -- CHỨC NĂNG E: LẬP HÓA ĐƠN NHẬP/XUẤT --
-// (Không thay đổi)
 // --------------------------------------------
 
 bool kiemTraTrungSoHD(char soHD[]) {
@@ -894,10 +966,8 @@ void giaiPhongDS_CTHD(ListCT_HoaDon& dscthd) {
 void xuLyLapHoaDon() {
     cout << "\n--- LAP HOA DON MOI ---\n";
 
-    int manv;
-    cout << "Nhap Ma Nhan Vien lap hoa don: ";
-    cin >> manv;
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    // <<< SỬA >>> Dùng hàm nhập an toàn
+    int manv = nhapSoNguyenDuong("Nhap Ma Nhan Vien lap hoa don: ");
 
     int indexNV = timNhanVienTheoMa(manv);
     if (indexNV == -1) {
@@ -919,11 +989,13 @@ void xuLyLapHoaDon() {
         return;
     }
 
+    // <<< SỬA >>> Cần validation ngày tháng (Hiện tại tạm chấp nhận)
+    // Tương lai: Nên viết hàm nhapDate()
     cout << "Nhap Ngay Lap (ngay thang nam): ";
     cin >> pHD->info.NgayLap.ngay >> pHD->info.NgayLap.thang >> pHD->info.NgayLap.nam;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    // (Giả sử người dùng nhập đúng)
 
-    // Yêu cầu "Chỉ N hoặc X" của bạn đã được xử lý ở đây
     do {
         cout << "Nhap Loai Hoa Don (N: Nhap, X: Xuat): ";
         cin >> pHD->info.Loai;
@@ -998,22 +1070,17 @@ void xuLyLapHoaDon() {
             else {
                 cout << "Vat tu: " << vtNode->info.TENVT << " | Ton kho hien tai: " << vtNode->info.SoLuongTon << endl;
 
-                cout << "Nhap So Luong: ";
-                cin >> cthd.SoLuong;
-                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                // <<< SỬA >>> Thêm validation cho SoLuong
+                cthd.SoLuong = nhapSoNguyenDuong("Nhap So Luong: ");
 
                 if (loaiHD == 'X' && cthd.SoLuong > vtNode->info.SoLuongTon) {
                     cout << "Loi: So luong xuat vuot qua so luong ton!\n";
                     cout << "So luong ton hien co trong kho: " << vtNode->info.SoLuongTon << endl;
                 }
                 else {
-                    cout << "Nhap Don Gia: ";
-                    cin >> cthd.DonGia;
-                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
-                    cout << "Nhap %VAT: ";
-                    cin >> cthd.VAT;
-                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    // <<< SỬA >>> Thêm validation cho DonGia và VAT
+                    cthd.DonGia = nhapSoFloatKhongAm("Nhap Don Gia: ");
+                    cthd.VAT = nhapSoFloatKhongAm("Nhap %VAT: ");
 
                     themCT_HoaDon(pHD->info.dscthd, cthd);
                     cout << "Da them vat tu vao hoa don.\n";
@@ -1069,11 +1136,13 @@ void xuLyLapHoaDon() {
                 NodeCT_HoaDon* pCT = pHD->info.dscthd.head;
                 while (pCT != NULL) {
                     NodeVattu* vtNode = findVattu(dsVatTu.root, pCT->info.MAVT);
-                    if (loaiHD == 'N') {
-                        vtNode->info.SoLuongTon += pCT->info.SoLuong;
-                    }
-                    else { // 'X'
-                        vtNode->info.SoLuongTon -= pCT->info.SoLuong;
+                    if (vtNode != NULL) { // Kiểm tra nếu VT còn tồn tại
+                        if (loaiHD == 'N') {
+                            vtNode->info.SoLuongTon += pCT->info.SoLuong;
+                        }
+                        else { // 'X'
+                            vtNode->info.SoLuongTon -= pCT->info.SoLuong;
+                        }
                     }
                     pCT = pCT->next;
                 }
@@ -1153,6 +1222,8 @@ void xuLyInHoaDon() {
     double tongTriGia = 0.0;
     NodeCT_HoaDon* pCT = hdTimThay->info.dscthd.head;
 
+    cout << fixed << setprecision(2); // Cài đặt 1 lần
+
     while (pCT != NULL) {
         NodeVattu* vtNode = findVattu(dsVatTu.root, pCT->info.MAVT);
         string tenVT = (vtNode != NULL) ? vtNode->info.TENVT : "??? (DA BI XOA)";
@@ -1162,14 +1233,16 @@ void xuLyInHoaDon() {
 
         cout << left << setw(20) << tenVT
             << right << setw(10) << pCT->info.SoLuong
-            << setw(15) << fixed << setprecision(2) << pCT->info.DonGia
-            << setw(15) << fixed << setprecision(2) << triGia << endl;
+            << setw(15) << pCT->info.DonGia
+            << setw(15) << triGia << endl;
         pCT = pCT->next;
     }
 
     cout << "-----------------------------------------------------------------\n";
-    cout << "TONG TRI GIA HOA DON: " << fixed << setprecision(2) << tongTriGia << endl;
+    cout << "TONG TRI GIA HOA DON: " << tongTriGia << endl;
     cout << "=================================================================\n";
+    
+    cout.unsetf(ios_base::floatfield); // Hủy cài đặt
 }
 
 // ----------------------------------------------------------------
@@ -1211,11 +1284,11 @@ void xuLyThongKeHoaDon() {
     cout << "Nam: "; cin >> denNgay.nam;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
-    cout << "\n\n                      BANG LIET KE CAC HOA DON TRONG KHOANG THOI GIAN\n";
-    cout << "                      Tu ngay : "
+    cout << "\n\n                       BANG LIET KE CAC HOA DON TRONG KHOANG THOI GIAN\n";
+    cout << "                  Tu ngay : "
         << setfill('0') << setw(2) << tuNgay.ngay << "/"
         << setw(2) << tuNgay.thang << "/" << setw(4) << tuNgay.nam;
-    cout << "    Den ngay : "
+    cout << "      Den ngay : "
         << setw(2) << denNgay.ngay << "/" << setw(2) << denNgay.thang
         << "/" << setw(4) << denNgay.nam << endl;
 
@@ -1229,6 +1302,7 @@ void xuLyThongKeHoaDon() {
     cout << "-------------------------------------------------------------------------------------------\n";
 
     bool timThay = false;
+    cout << fixed << setprecision(2); // Cài đặt 1 lần
 
     for (int i = 0; i < dsNhanVien.soLuong; i++) {
         Nhanvien* nv = dsNhanVien.dsnv[i];
@@ -1249,7 +1323,7 @@ void xuLyThongKeHoaDon() {
                     << setw(15) << ngayLapStr
                     << setw(10) << loaiStr
                     << setw(30) << hoTenNV
-                    << right << setw(15) << fixed << setprecision(2) << triGia << endl;
+                    << right << setw(15) << triGia << endl;
             }
             pHD = pHD->next;
         }
@@ -1259,6 +1333,59 @@ void xuLyThongKeHoaDon() {
         cout << "\nKhong tim thay hoa don nao trong khoang thoi gian nay.\n";
     }
     cout << "-------------------------------------------------------------------------------------------\n";
+    cout.unsetf(ios_base::floatfield); // Hủy cài đặt
+}
+
+// ----------------------------------------------------------------
+// -- CHỨC NĂNG H: <<< MỚI >>> THỐNG KÊ DOANH THU THEO NĂM --
+// ----------------------------------------------------------------
+void xuLyThongKeDoanhThuTheoNam() {
+    cout << "\n--- THONG KE DOANH THU (CHI TINH HOA DON XUAT) ---\n";
+    
+    // Yêu cầu: "chỉ được nhập 4 số ko được nhập chữ"
+    int namThongKe = nhapSoNguyen("Nhap Nam can thong ke (VD: 2024): ", 4, 4);
+
+    // Khởi tạo mảng 12 tháng, doanh thu = 0
+    double doanhThuThang[12] = { 0.0 };
+
+    // Bắt đầu quét
+    for (int i = 0; i < dsNhanVien.soLuong; i++) {
+        Nhanvien* nv = dsNhanVien.dsnv[i];
+        NodeHoaDon* pHD = nv->dshd.head;
+
+        while (pHD != NULL) {
+            // Chỉ tính hóa đơn XUẤT (X) và đúng NĂM
+            if (pHD->info.Loai == 'X' && pHD->info.NgayLap.nam == namThongKe) {
+                int thang = pHD->info.NgayLap.thang; // Lấy tháng (1-12)
+                if (thang >= 1 && thang <= 12) {
+                    double triGia = tinhTongTriGia(pHD->info.dscthd);
+                    doanhThuThang[thang - 1] += triGia; // -1 vì mảng bắt đầu từ 0
+                }
+            }
+            pHD = pHD->next;
+        }
+    }
+
+    // In bảng
+    cout << "\n\n         BANG THONG KE DOANH THU NAM " << namThongKe << endl;
+    cout << "---------------------------------------------\n";
+    cout << left << setw(20) << "THANG" << right << setw(20) << "DOANH THU" << endl;
+    cout << "---------------------------------------------\n";
+
+    cout << fixed << setprecision(2); // Cài đặt
+    double tongDoanhThu = 0.0;
+
+    for (int i = 0; i < 12; i++) {
+        cout << left << setw(20) << ("Thang " + to_string(i + 1))
+             << right << setw(20) << doanhThuThang[i] << endl;
+        tongDoanhThu += doanhThuThang[i];
+    }
+    
+    cout << "---------------------------------------------\n";
+    cout << left << setw(20) << "TONG CONG" 
+         << right << setw(20) << tongDoanhThu << endl;
+    cout << "---------------------------------------------\n";
+    cout.unsetf(ios_base::floatfield); // Hủy cài đặt
 }
 
 
@@ -1275,12 +1402,244 @@ void giaiPhongCayVatTu(NodeVattu*& root) {
 
 
 // ---------------------------------
+// -- CHỨC NĂNG I: <<< MỚI >>> LƯU/TẢI FILE --
+// ---------------------------------
+
+// === HÀM LƯU DỮ LIỆU ===
+
+// Helper đệ quy để lưu cây AVL
+void luuNodeVatTu(ofstream& file, NodeVattu* root) {
+    if (root != NULL) {
+        // Ghi thông tin của node hiện tại
+        // Dùng | làm dấu phân cách
+        file << root->info.MAVT << "|" 
+             << root->info.TENVT << "|" 
+             << root->info.DVT << "|" 
+             << root->info.SoLuongTon << "\n";
+        
+        // Đệ quy sang con trái và con phải
+        luuNodeVatTu(file, root->left);
+        luuNodeVatTu(file, root->right);
+    }
+}
+
+void luuDuLieu() {
+    cout << "Bat dau luu du lieu...\n";
+    
+    // --- 1. Lưu Vật Tư ---
+    ofstream fileVT(FILE_VATTU);
+    if (!fileVT.is_open()) {
+        cout << "Loi: Khong a the mo file " << FILE_VATTU << " de ghi!\n";
+    } else {
+        luuNodeVatTu(fileVT, dsVatTu.root);
+        fileVT.close();
+        cout << "Da luu danh sach Vat Tu vao file " << FILE_VATTU << "\n";
+    }
+
+    // --- 2. Lưu Nhân Viên (và Hóa Đơn) ---
+    ofstream fileNV(FILE_NHANVIEN);
+    if (!fileNV.is_open()) {
+        cout << "Loi: Khong a the mo file " << FILE_NHANVIEN << " de ghi!\n";
+    } else {
+        // Dòng đầu tiên: lưu số lượng nhân viên
+        fileNV << dsNhanVien.soLuong << "\n";
+
+        for (int i = 0; i < dsNhanVien.soLuong; i++) {
+            Nhanvien* nv = dsNhanVien.dsnv[i];
+            
+            // Lưu thông tin cơ bản của NV
+            fileNV << nv->MANV << "|" << nv->HO << "|" << nv->TEN << "|" << nv->GIOITINH << "\n";
+
+            // Đếm số Hóa Đơn của NV này
+            int soHD = 0;
+            NodeHoaDon* pHD = nv->dshd.head;
+            while (pHD != NULL) {
+                soHD++;
+                pHD = pHD->next;
+            }
+            fileNV << soHD << "\n"; // Lưu số lượng HD
+
+            // Lặp lại để lưu từng HD
+            pHD = nv->dshd.head;
+            while (pHD != NULL) {
+                // Lưu thông tin HD
+                fileNV << pHD->info.SoHD << "|" 
+                       << pHD->info.NgayLap.ngay << "|" << pHD->info.NgayLap.thang << "|" << pHD->info.NgayLap.nam << "|" 
+                       << pHD->info.Loai << "\n";
+                
+                // Đếm số CT_HD
+                int soCTHD = 0;
+                NodeCT_HoaDon* pCT = pHD->info.dscthd.head;
+                while (pCT != NULL) {
+                    soCTHD++;
+                    pCT = pCT->next;
+                }
+                fileNV << soCTHD << "\n"; // Lưu số lượng CT_HD
+                
+                // Lặp lại để lưu từng CT_HD
+                pCT = pHD->info.dscthd.head;
+                while (pCT != NULL) {
+                    fileNV << pCT->info.MAVT << "|" 
+                           << pCT->info.SoLuong << "|" << pCT->info.DonGia << "|" << pCT->info.VAT << "\n";
+                    pCT = pCT->next;
+                }
+                pHD = pHD->next;
+            }
+        }
+        fileNV.close();
+        cout << "Da luu danh sach Nhan Vien & Hoa Don vao file " << FILE_NHANVIEN << "\n";
+    }
+    cout << "Luu du lieu hoan tat!\n";
+}
+
+
+// === HÀM TẢI DỮ LIỆU ===
+void taiDuLieu() {
+    string line, field;
+    cout << "Bat dau tai du lieu...\n";
+
+    // --- 1. Tải Vật Tư ---
+    ifstream fileVT(FILE_VATTU);
+    if (!fileVT.is_open()) {
+        cout << "Thong bao: Khong tim thay file " << FILE_VATTU << ". Bat dau voi danh sach vat tu rong.\n";
+    } else {
+        int countVT = 0;
+        while (getline(fileVT, line)) {
+            if(line.empty()) continue; // Bỏ qua dòng trống
+
+            Vattu vt;
+            stringstream ss(line);
+
+            // Đọc MAVT (char[])
+            getline(ss, field, '|');
+            strncpy(vt.MAVT, field.c_str(), 10);
+            vt.MAVT[10] = '\0';
+
+            // Đọc TENVT (string)
+            getline(ss, field, '|');
+            vt.TENVT = field;
+
+            // Đọc DVT (string)
+            getline(ss, field, '|');
+            vt.DVT = field;
+
+            // Đọc SoLuongTon (int)
+            getline(ss, field, '|');
+            vt.SoLuongTon = stoi(field);
+
+            // Thêm vào cây
+            dsVatTu.root = insertVattu(dsVatTu.root, vt);
+            countVT++;
+        }
+        fileVT.close();
+        cout << "Da tai " << countVT << " vat tu tu file " << FILE_VATTU << "\n";
+    }
+
+    // --- 2. Tải Nhân Viên (và Hóa Đơn) ---
+    ifstream fileNV(FILE_NHANVIEN);
+    if (!fileNV.is_open()) {
+        cout << "Thong bao: Khong tim thay file " << FILE_NHANVIEN << ". Bat dau voi danh sach nhan vien rong.\n";
+    } else {
+        // Đọc dòng đầu tiên: số lượng nhân viên
+        getline(fileNV, line);
+        if(line.empty()) {
+             cout << "File " << FILE_NHANVIEN << " rong. Bat dau voi danh sach nhan vien rong.\n";
+             fileNV.close();
+             return;
+        }
+        
+        dsNhanVien.soLuong = stoi(line);
+
+        for (int i = 0; i < dsNhanVien.soLuong; i++) {
+            Nhanvien* nvMoi = new Nhanvien;
+
+            // Đọc thông tin NV
+            getline(fileNV, line);
+            stringstream ssNV(line);
+            getline(ssNV, field, '|'); nvMoi->MANV = stoi(field);
+            getline(ssNV, field, '|'); nvMoi->HO = field;
+            getline(ssNV, field, '|'); nvMoi->TEN = field;
+            getline(ssNV, field, '|'); nvMoi->GIOITINH = field;
+            nvMoi->dshd.head = NULL; // Khởi tạo
+
+            // Đọc số lượng HD
+            getline(fileNV, line);
+            int soHD = stoi(line);
+            
+            NodeHoaDon* tailHD = NULL; // Dùng tail để giữ đúng thứ tự
+
+            for(int j=0; j < soHD; j++) {
+                NodeHoaDon* pHD = new NodeHoaDon;
+                pHD->next = NULL;
+
+                // Đọc thông tin HD
+                getline(fileNV, line);
+                stringstream ssHD(line);
+                getline(ssHD, field, '|'); strncpy(pHD->info.SoHD, field.c_str(), 20); pHD->info.SoHD[20] = '\0';
+                getline(ssHD, field, '|'); pHD->info.NgayLap.ngay = stoi(field);
+                getline(ssHD, field, '|'); pHD->info.NgayLap.thang = stoi(field);
+                getline(ssHD, field, '|'); pHD->info.NgayLap.nam = stoi(field);
+                getline(ssHD, field, '|'); pHD->info.Loai = field[0];
+                pHD->info.dscthd.head = NULL; // Khởi tạo
+
+                // Đọc số lượng CTHD
+                getline(fileNV, line);
+                int soCTHD = stoi(line);
+                
+                NodeCT_HoaDon* tailCT = NULL; // Dùng tail
+
+                for (int k = 0; k < soCTHD; k++) {
+                    NodeCT_HoaDon* pCT = new NodeCT_HoaDon;
+                    pCT->next = NULL;
+
+                    // Đọc thông tin CTHD
+                    getline(fileNV, line);
+                    stringstream ssCT(line);
+                    getline(ssCT, field, '|'); strncpy(pCT->info.MAVT, field.c_str(), 10); pCT->info.MAVT[10] = '\0';
+                    getline(ssCT, field, '|'); pCT->info.SoLuong = stoi(field);
+                    getline(ssCT, field, '|'); pCT->info.DonGia = stof(field);
+                    getline(ssCT, field, '|'); pCT->info.VAT = stof(field);
+
+                    // Thêm vào cuối CTHD
+                    if(tailCT == NULL) {
+                        pHD->info.dscthd.head = pCT;
+                    } else {
+                        tailCT->next = pCT;
+                    }
+                    tailCT = pCT;
+                }
+                
+                // Thêm vào cuối DSHD
+                 if(tailHD == NULL) {
+                    nvMoi->dshd.head = pHD;
+                } else {
+                    tailHD->next = pHD;
+                }
+                tailHD = pHD;
+            }
+            // Thêm NV vào mảng (đã được sắp xếp khi lưu)
+            dsNhanVien.dsnv[i] = nvMoi;
+        }
+        fileNV.close();
+        cout << "Da tai " << dsNhanVien.soLuong << " nhan vien tu file " << FILE_NHANVIEN << "\n";
+    }
+    
+    cout << "Tai du lieu hoan tat!\n";
+    pressEnterToContinue(); // Dừng lại để xem kết quả tải
+}
+
+
+// ---------------------------------
 // -- HÀM MAIN CHÍNH (HOÀN CHỈNH) --
-// (Không thay đổi)
+// (Sửa đổi để thêm menu mới)
 // ---------------------------------
 int main() {
     initTree(dsVatTu);
     dsNhanVien.soLuong = 0;
+    
+    // <<< MỚI >>> Tải dữ liệu khi khởi động
+    clearScreen();
+    taiDuLieu();
     
     int choice = -1;
 
@@ -1295,20 +1654,21 @@ int main() {
         cout << "4. In Danh Sach Nhan Vien (Chuc nang d)\n";
         cout << "5. Lap Hoa Don Nhap/Xuat (Chuc nang e)\n";
         cout << "6. In Hoa Don (Chuc nang f)\n";
-        cout << "7. Thong Ke Hoa Don (Chuc nang g)\n";
-        cout << "0. Thoat Chuong Trinh\n";
+        cout << "7. Thong Ke Hoa Don (Theo Ngay) (Chuc nang g)\n";
+        cout << "8. Thong Ke Doanh Thu (Theo Nam) (Chuc nang h) <<< MOI >>>\n";
+        cout << "9. Luu Du Lieu Vao File (Chuc nang i) <<< MOI >>>\n";
+        cout << "0. Luu & Thoat Chuong Trinh\n";
         cout << "============================================\n";
         cout << "Lua chon cua ban: ";
         
         cin >> choice;
         
-        // <<< SỬA >>> Xử lý lỗi nhập sai (không phải số)
         if (cin.fail()) {
-            cin.clear(); // Xóa cờ lỗi
-            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Xóa bộ đệm
-            choice = -1; // Đặt lại choice để lặp lại
+            cin.clear(); 
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+            choice = -1; 
         } else {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Xóa \n nếu nhập đúng
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
         }
 
         clearScreen();
@@ -1335,8 +1695,16 @@ int main() {
         case 7:
             xuLyThongKeHoaDon();
             break;
+        case 8: // <<< MỚI >>>
+            xuLyThongKeDoanhThuTheoNam();
+            break;
+        case 9: // <<< MỚI >>>
+            luuDuLieu();
+            break;
         case 0:
-            cout << "Tam biet! Dang don dep bo nho...\n";
+            cout << "Tam biet! Dang luu du lieu & don dep bo nho...\n";
+            // <<< MỚI >>> Tự động lưu khi thoát
+            luuDuLieu(); 
             break;
         default:
             cout << "Lua chon khong hop le. Vui long chon lai.\n";
