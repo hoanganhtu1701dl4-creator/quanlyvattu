@@ -1,20 +1,29 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Run C++ (gdb) Linux",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${fileDirname}/${fileBasenameNoExtension}", // 1. Tệp thực thi (đã build ở task)
-      "args": [],
-      "stopAtEntry": false,
-      "cwd": "${fileDirname}",
-      "environment": [],
-      "externalConsole": false,        // 2. Không dùng console ngoài
-      "console": "integratedTerminal", // 3. Dùng terminal tích hợp cho cin/cout
-      "MIMode": "gdb",
-      "miDebuggerPath": "/usr/bin/gdb", // 4. Đường dẫn GDB chuẩn của Linux
-      "preLaunchTask": "Build C++ (g++)" // 5. Tên task phải khớp với tasks.json
-    }
-  ]
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run C++ (gdb) Linux",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/${fileBasenameNoExtension}", 
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "console": "integratedTerminal",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "preLaunchTask": "g++.exe build active file" 
+        }
+        
+        , 
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "enter program name, for example ${workspaceFolder}/a.out",
+            
+        }
+    ]
 }
